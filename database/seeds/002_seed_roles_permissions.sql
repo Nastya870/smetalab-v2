@@ -78,7 +78,35 @@ INSERT INTO permissions (key, name, description, resource, action) VALUES
     ('comments.create', 'Создание комментариев', 'Добавление комментариев', 'comments', 'create'),
     ('comments.read', 'Просмотр комментариев', 'Просмотр комментариев', 'comments', 'read'),
     ('comments.update', 'Редактирование комментариев', 'Изменение комментариев', 'comments', 'update'),
-    ('comments.delete', 'Удаление комментариев', 'Удаление комментариев', 'comments', 'delete')
+    ('comments.delete', 'Удаление комментариев', 'Удаление комментариев', 'comments', 'delete'),
+    
+    -- Управление материалами (справочник)
+    ('materials.create', 'Создание материалов', 'Добавление новых материалов в справочник', 'materials', 'create'),
+    ('materials.read', 'Просмотр материалов', 'Просмотр справочника материалов', 'materials', 'read'),
+    ('materials.update', 'Редактирование материалов', 'Изменение данных материалов', 'materials', 'update'),
+    ('materials.delete', 'Удаление материалов', 'Удаление материалов из справочника', 'materials', 'delete'),
+    ('materials.manage', 'Управление материалами', 'Полное управление справочником материалов', 'materials', 'manage'),
+    
+    -- Управление работами (справочник)
+    ('works.create', 'Создание работ', 'Добавление новых работ в справочник', 'works', 'create'),
+    ('works.read', 'Просмотр работ', 'Просмотр справочника работ', 'works', 'read'),
+    ('works.update', 'Редактирование работ', 'Изменение данных работ', 'works', 'update'),
+    ('works.delete', 'Удаление работ', 'Удаление работ из справочника', 'works', 'delete'),
+    ('works.manage', 'Управление работами', 'Полное управление справочником работ', 'works', 'manage'),
+    
+    -- Управление контрагентами
+    ('counterparties.create', 'Создание контрагентов', 'Добавление контрагентов', 'counterparties', 'create'),
+    ('counterparties.read', 'Просмотр контрагентов', 'Просмотр контрагентов', 'counterparties', 'read'),
+    ('counterparties.update', 'Редактирование контрагентов', 'Изменение контрагентов', 'counterparties', 'update'),
+    ('counterparties.delete', 'Удаление контрагентов', 'Удаление контрагентов', 'counterparties', 'delete'),
+    ('counterparties.manage', 'Управление контрагентами', 'Полное управление контрагентами', 'counterparties', 'manage'),
+    
+    -- Управление справочниками (родительский ресурс)
+    ('references.create', 'Создание в справочниках', 'Создание записей в справочниках', 'references', 'create'),
+    ('references.read', 'Просмотр справочников', 'Просмотр справочников', 'references', 'read'),
+    ('references.update', 'Редактирование справочников', 'Редактирование справочников', 'references', 'update'),
+    ('references.delete', 'Удаление из справочников', 'Удаление записей из справочников', 'references', 'delete'),
+    ('references.manage', 'Управление справочниками', 'Полное управление справочниками', 'references', 'manage')
 ON CONFLICT (key) DO NOTHING;
 
 -- =====================================================
@@ -125,7 +153,7 @@ SELECT r.id, p.id
 FROM roles r
 CROSS JOIN permissions p
 WHERE r.key = 'project_manager'
-  AND p.key IN ('users.read', 'settings.read')
+  AND p.key IN ('users.read', 'settings.read', 'materials.read', 'works.read', 'counterparties.read')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- Сметчик: создание и редактирование смет
@@ -142,7 +170,7 @@ SELECT r.id, p.id
 FROM roles r
 CROSS JOIN permissions p
 WHERE r.key = 'estimator'
-  AND p.key IN ('projects.read', 'reports.read', 'users.read')
+  AND p.key IN ('projects.read', 'reports.read', 'users.read', 'materials.read', 'works.read', 'counterparties.read')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- Поставщик: просмотр смет, добавление комментариев
