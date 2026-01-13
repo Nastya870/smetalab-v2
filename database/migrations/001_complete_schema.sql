@@ -1,6 +1,6 @@
 -- =====================================
 -- BASELINE SCHEMA - SmetaLab
--- Сгенерировано: 2026-01-13T11:04:38.511Z
+-- Сгенерировано: 2026-01-13T11:08:11.509Z
 -- 
 -- Этот файл содержит полную схему БД
 -- Использовать ТОЛЬКО для новых деплоев!
@@ -251,7 +251,7 @@ CREATE TABLE IF NOT EXISTS global_purchases (
 
 -- materials
 CREATE TABLE IF NOT EXISTS materials (
-  id integer NOT NULL DEFAULT nextval('materials_id_seq',
+  id integer NOT NULL DEFAULT nextval('materials_id_seq'),
   sku VARCHAR(100) NOT NULL,
   name VARCHAR(255) NOT NULL,
   image text,
@@ -615,7 +615,7 @@ CREATE TABLE IF NOT EXISTS work_completions (
 
 -- work_hierarchy
 CREATE TABLE IF NOT EXISTS work_hierarchy (
-  id integer NOT NULL DEFAULT nextval('work_hierarchy_id_seq',
+  id integer NOT NULL DEFAULT nextval('work_hierarchy_id_seq'),
   level VARCHAR(20) NOT NULL,
   parent_value VARCHAR(100),
   value VARCHAR(100) NOT NULL,
@@ -629,7 +629,7 @@ CREATE TABLE IF NOT EXISTS work_hierarchy (
 
 -- work_materials
 CREATE TABLE IF NOT EXISTS work_materials (
-  id integer NOT NULL DEFAULT nextval('work_materials_id_seq',
+  id integer NOT NULL DEFAULT nextval('work_materials_id_seq'),
   work_id integer NOT NULL,
   material_id integer NOT NULL,
   consumption numeric NOT NULL DEFAULT 1.0,
@@ -644,7 +644,7 @@ CREATE TABLE IF NOT EXISTS work_materials (
 
 -- works
 CREATE TABLE IF NOT EXISTS works (
-  id integer NOT NULL DEFAULT nextval('works_id_seq',
+  id integer NOT NULL DEFAULT nextval('works_id_seq'),
   code VARCHAR(50) NOT NULL,
   name VARCHAR(255) NOT NULL,
   unit VARCHAR(50) NOT NULL,
