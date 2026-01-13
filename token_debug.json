@@ -1,7 +1,7 @@
 {
-  "userId": "f8a29543-3172-43ef-a620-2bb73e891de7",
-  "tenantId": "fd59aab2-4ee9-43ae-9ce6-acee718d4752",
-  "email": "boundary_1768231603835@test.com",
+  "userId": "bcdca2c9-b53b-459c-8ee9-aef21a2d3004",
+  "tenantId": "dca2088d-bef2-4eca-97ed-52170cbc6f9a",
+  "email": "boundary_1768307199392@test.com",
   "emailVerified": true,
   "isSuperAdmin": false,
   "roleKey": "viewer",
@@ -19,6 +19,11 @@
     {
       "key": "comments.read",
       "resource": "comments",
+      "action": "read"
+    },
+    {
+      "key": "counterparties.read",
+      "resource": "counterparties",
       "action": "read"
     },
     {
@@ -55,6 +60,11 @@
       "key": "estimate_templates.view_menu",
       "resource": "estimate_templates",
       "action": "view_menu"
+    },
+    {
+      "key": "materials.read",
+      "resource": "materials",
+      "action": "read"
     },
     {
       "key": "materials.view_menu",
@@ -117,12 +127,17 @@
       "action": "view_menu"
     },
     {
+      "key": "works.read",
+      "resource": "works",
+      "action": "read"
+    },
+    {
       "key": "works.view_menu",
       "resource": "works",
       "action": "view_menu"
     }
   ],
   "type": "access",
-  "iat": 1768231609,
-  "exp": 1768232509
+  "iat": 1768307204,
+  "exp": 1768308104
 }
