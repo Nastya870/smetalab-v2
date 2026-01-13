@@ -1,6 +1,6 @@
 -- =====================================
 -- BASELINE SCHEMA - SmetaLab
--- Сгенерировано: 2026-01-13T11:08:11.509Z
+-- Сгенерировано: 2026-01-13T11:17:24.660Z
 -- 
 -- Этот файл содержит полную схему БД
 -- Использовать ТОЛЬКО для новых деплоев!
@@ -15,873 +15,13 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
 -- =====================================
--- ТАБЛИЦЫ
+-- ПОСЛЕДОВАТЕЛЬНОСТИ
 -- =====================================
 
--- act_signatories
-CREATE TABLE IF NOT EXISTS act_signatories (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  act_id uuid NOT NULL,
-  tenant_id uuid NOT NULL,
-  role VARCHAR(50) NOT NULL,
-  full_name VARCHAR(255) NOT NULL,
-  position VARCHAR(255),
-  signed_at date,
-  created_at timestamp with time zone DEFAULT now()
-);
-
--- categories
-CREATE TABLE IF NOT EXISTS categories (
-  id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  parent_id uuid,
-  name text NOT NULL,
-  type text DEFAULT 'work',
-  tenant_id uuid,
-  is_global boolean DEFAULT false,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now()
-);
-
--- contracts
-CREATE TABLE IF NOT EXISTS contracts (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL,
-  project_id uuid NOT NULL,
-  estimate_id uuid NOT NULL,
-  contract_number VARCHAR(50) NOT NULL,
-  contract_date date NOT NULL DEFAULT CURRENT_DATE,
-  customer_id uuid,
-  contractor_id uuid,
-  total_amount numeric NOT NULL DEFAULT 0.00,
-  materials_amount numeric DEFAULT 0.00,
-  warranty_period VARCHAR(100) DEFAULT '1 год',
-  status VARCHAR(50) NOT NULL DEFAULT 'draft',
-  template_data jsonb NOT NULL DEFAULT '{}',
-  file_url text,
-  created_at timestamp with time zone DEFAULT now(),
-  created_by uuid,
-  updated_at timestamp with time zone DEFAULT now(),
-  updated_by uuid
-);
-
--- counterparties
-CREATE TABLE IF NOT EXISTS counterparties (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL,
-  entity_type VARCHAR(20) NOT NULL,
-  full_name VARCHAR(255),
-  birth_date date,
-  birth_place text,
-  passport_series_number VARCHAR(50),
-  passport_issued_by text,
-  passport_issue_date date,
-  registration_address text,
-  company_name VARCHAR(500),
-  inn VARCHAR(12),
-  ogrn VARCHAR(15),
-  kpp VARCHAR(9),
-  legal_address text,
-  actual_address text,
-  bank_account VARCHAR(20),
-  correspondent_account VARCHAR(20),
-  bank_bik VARCHAR(9),
-  bank_name VARCHAR(500),
-  director_name VARCHAR(255),
-  accountant_name VARCHAR(255),
-  phone VARCHAR(50),
-  email VARCHAR(255),
-  created_at timestamp with time zone DEFAULT now(),
-  created_by uuid,
-  updated_at timestamp with time zone DEFAULT now(),
-  updated_by uuid,
-  passport_series VARCHAR(4),
-  passport_number VARCHAR(6),
-  passport_issued_by_code VARCHAR(7)
-);
-
--- email_verification_tokens
-CREATE TABLE IF NOT EXISTS email_verification_tokens (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  token VARCHAR(64) NOT NULL,
-  expires_at timestamp with time zone NOT NULL,
-  created_at timestamp with time zone DEFAULT now()
-);
-
--- email_verifications
-CREATE TABLE IF NOT EXISTS email_verifications (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  email citext NOT NULL,
-  token text NOT NULL,
-  expires_at timestamp with time zone NOT NULL,
-  verified_at timestamp with time zone,
-  created_at timestamp with time zone DEFAULT now()
-);
-
--- estimate_item_materials
-CREATE TABLE IF NOT EXISTS estimate_item_materials (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  estimate_item_id uuid NOT NULL,
-  material_id integer NOT NULL,
-  quantity numeric NOT NULL,
-  unit_price numeric NOT NULL,
-  total_price numeric,
-  consumption_coefficient numeric DEFAULT 1.0,
-  is_required boolean DEFAULT true,
-  notes text,
-  created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  auto_calculate boolean DEFAULT true,
-  weight numeric DEFAULT 0,
-  total_weight numeric
-);
-
--- estimate_items
-CREATE TABLE IF NOT EXISTS estimate_items (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  estimate_id uuid NOT NULL,
-  position_number integer NOT NULL,
-  item_type VARCHAR(50) NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  description text,
-  code VARCHAR(100),
-  unit VARCHAR(50) NOT NULL,
-  quantity numeric NOT NULL,
-  unit_price numeric NOT NULL,
-  total_price numeric,
-  overhead_percent numeric DEFAULT 0,
-  profit_percent numeric DEFAULT 0,
-  tax_percent numeric DEFAULT 0,
-  final_price numeric,
-  notes text,
-  is_optional boolean DEFAULT false,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  source_type text NOT NULL DEFAULT 'tenant',
-  phase VARCHAR(100),
-  section VARCHAR(100),
-  subsection VARCHAR(100),
-  work_id integer
-);
-
--- estimate_template_materials
-CREATE TABLE IF NOT EXISTS estimate_template_materials (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  template_id uuid NOT NULL,
-  material_id integer NOT NULL,
-  quantity numeric NOT NULL DEFAULT 1,
-  notes text,
-  sort_order integer DEFAULT 0,
-  created_at timestamp without time zone DEFAULT now(),
-  template_work_id uuid
-);
-
--- estimate_template_works
-CREATE TABLE IF NOT EXISTS estimate_template_works (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  template_id uuid NOT NULL,
-  work_id integer NOT NULL,
-  quantity numeric NOT NULL DEFAULT 1,
-  phase VARCHAR(100),
-  section VARCHAR(100),
-  subsection VARCHAR(100),
-  notes text,
-  sort_order integer DEFAULT 0,
-  created_at timestamp without time zone DEFAULT now()
-);
-
--- estimate_templates
-CREATE TABLE IF NOT EXISTS estimate_templates (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  description text,
-  category VARCHAR(100),
-  created_by uuid,
-  created_at timestamp without time zone DEFAULT now(),
-  updated_at timestamp without time zone DEFAULT now()
-);
-
--- estimates
-CREATE TABLE IF NOT EXISTS estimates (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL,
-  project_id uuid NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  description text,
-  estimate_type VARCHAR(50) NOT NULL,
-  status VARCHAR(50) NOT NULL DEFAULT 'draft',
-  total_amount numeric DEFAULT 0.00,
-  currency VARCHAR(10) DEFAULT 'RUB',
-  estimate_date date NOT NULL DEFAULT CURRENT_DATE,
-  valid_until date,
-  approved_at timestamp with time zone,
-  approved_by uuid,
-  created_by uuid NOT NULL,
-  updated_by uuid,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now()
-);
-
--- global_purchases
-CREATE TABLE IF NOT EXISTS global_purchases (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL,
-  project_id uuid NOT NULL,
-  estimate_id uuid NOT NULL,
-  material_id integer NOT NULL,
-  material_sku VARCHAR(100),
-  material_name text NOT NULL,
-  material_image text,
-  unit VARCHAR(50) NOT NULL,
-  category VARCHAR(255),
-  quantity numeric NOT NULL,
-  purchase_price numeric NOT NULL,
-  total_price numeric NOT NULL,
-  source_purchase_id uuid,
-  purchase_date date NOT NULL DEFAULT CURRENT_DATE,
-  project_name text,
-  estimate_name text,
-  created_by uuid,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  is_extra_charge boolean DEFAULT false
-);
-
--- materials
-CREATE TABLE IF NOT EXISTS materials (
-  id integer NOT NULL DEFAULT nextval('materials_id_seq'),
-  sku VARCHAR(100) NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  image text,
-  unit VARCHAR(50) NOT NULL,
-  price numeric NOT NULL DEFAULT 0.00,
-  supplier VARCHAR(255),
-  weight numeric,
-  category VARCHAR(100) NOT NULL,
-  product_url text,
-  show_image boolean DEFAULT true,
-  tenant_id uuid,
-  created_by uuid,
-  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-  updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-  is_global boolean DEFAULT false,
-  auto_calculate boolean DEFAULT true,
-  consumption numeric DEFAULT 0,
-  consumption_unit VARCHAR(50),
-  sku_number integer
-);
-
--- object_openings
-CREATE TABLE IF NOT EXISTS object_openings (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL,
-  parameter_id uuid NOT NULL,
-  opening_type VARCHAR(50) NOT NULL,
-  position_number integer NOT NULL,
-  height numeric NOT NULL,
-  width numeric NOT NULL,
-  slope_length numeric,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now()
-);
-
--- object_parameters
-CREATE TABLE IF NOT EXISTS object_parameters (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL,
-  estimate_id uuid NOT NULL,
-  position_number integer NOT NULL,
-  room_name VARCHAR(255) NOT NULL,
-  perimeter numeric,
-  height numeric,
-  floor_area numeric,
-  wall_area numeric,
-  ceiling_area numeric,
-  ceiling_slopes numeric,
-  doors_count integer DEFAULT 0,
-  baseboards numeric,
-  total_window_slopes numeric DEFAULT 0,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  created_by uuid,
-  updated_by uuid
-);
-
--- password_resets
-CREATE TABLE IF NOT EXISTS password_resets (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  email citext NOT NULL,
-  token text NOT NULL,
-  expires_at timestamp with time zone NOT NULL,
-  used_at timestamp with time zone,
-  created_at timestamp with time zone DEFAULT now()
-);
-
--- permissions
-CREATE TABLE IF NOT EXISTS permissions (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  key text NOT NULL,
-  name text NOT NULL,
-  description text,
-  resource text NOT NULL,
-  action text NOT NULL,
-  created_at timestamp with time zone DEFAULT now(),
-  is_hidden boolean DEFAULT false
-);
-
--- project_team_members
-CREATE TABLE IF NOT EXISTS project_team_members (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  project_id uuid NOT NULL,
-  user_id uuid NOT NULL,
-  tenant_id uuid NOT NULL,
-  role VARCHAR(100) NOT NULL,
-  responsibilities text,
-  can_edit boolean DEFAULT false,
-  can_view_financials boolean DEFAULT false,
-  joined_at timestamp with time zone NOT NULL DEFAULT now(),
-  left_at timestamp with time zone,
-  added_by uuid
-);
-
--- projects
-CREATE TABLE IF NOT EXISTS projects (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  object_name VARCHAR(255) NOT NULL,
-  description text,
-  client VARCHAR(255) NOT NULL,
-  contractor VARCHAR(255) NOT NULL,
-  address text NOT NULL,
-  start_date date,
-  end_date date,
-  actual_end_date date,
-  status VARCHAR(50) NOT NULL DEFAULT 'planning',
-  progress integer NOT NULL DEFAULT 0,
-  budget numeric DEFAULT 0.00,
-  actual_cost numeric DEFAULT 0.00,
-  created_by uuid,
-  updated_by uuid,
-  manager_id uuid,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  contract_number VARCHAR(50)
-);
-
--- purchases
-CREATE TABLE IF NOT EXISTS purchases (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL,
-  project_id uuid NOT NULL,
-  estimate_id uuid NOT NULL,
-  material_id integer NOT NULL,
-  material_sku VARCHAR(100),
-  material_name text NOT NULL,
-  category VARCHAR(255),
-  unit VARCHAR(50) NOT NULL,
-  quantity numeric NOT NULL DEFAULT 0,
-  unit_price numeric NOT NULL DEFAULT 0,
-  total_price numeric NOT NULL DEFAULT 0,
-  created_by uuid,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  material_image text,
-  purchased_quantity numeric DEFAULT 0,
-  is_extra_charge boolean DEFAULT false
-);
-
--- role_permissions
-CREATE TABLE IF NOT EXISTS role_permissions (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  role_id uuid NOT NULL,
-  permission_id uuid NOT NULL,
-  created_at timestamp with time zone DEFAULT now(),
-  is_hidden boolean DEFAULT false
-);
-
--- roles
-CREATE TABLE IF NOT EXISTS roles (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  key text NOT NULL,
-  name text NOT NULL,
-  description text,
-  is_system boolean DEFAULT false,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  tenant_id uuid
-);
-
--- schedules
-CREATE TABLE IF NOT EXISTS schedules (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL,
-  project_id uuid NOT NULL,
-  estimate_id uuid NOT NULL,
-  phase VARCHAR(255) NOT NULL,
-  work_id uuid,
-  work_code VARCHAR(50),
-  work_name text NOT NULL,
-  unit VARCHAR(50) NOT NULL,
-  quantity numeric NOT NULL DEFAULT 0,
-  unit_price numeric NOT NULL DEFAULT 0,
-  total_price numeric NOT NULL DEFAULT 0,
-  position_number integer NOT NULL DEFAULT 0,
-  created_by uuid,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now()
-);
-
--- schema_version
-CREATE TABLE IF NOT EXISTS schema_version (
-  id integer NOT NULL,
-  applied_at timestamp with time zone NOT NULL DEFAULT now(),
-  description text NOT NULL
-);
-
--- sessions
-CREATE TABLE IF NOT EXISTS sessions (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  tenant_id uuid,
-  refresh_token text NOT NULL,
-  device_info text,
-  ip_address inet,
-  expires_at timestamp with time zone NOT NULL,
-  created_at timestamp with time zone DEFAULT now(),
-  last_used_at timestamp with time zone DEFAULT now()
-);
-
--- tenants
-CREATE TABLE IF NOT EXISTS tenants (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  name text NOT NULL,
-  plan text DEFAULT 'free',
-  status text DEFAULT 'active',
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  company_full_name text,
-  inn VARCHAR(12),
-  ogrn VARCHAR(15),
-  kpp VARCHAR(9),
-  legal_address text,
-  actual_address text,
-  bank_account VARCHAR(20),
-  correspondent_account VARCHAR(20),
-  bank_bik VARCHAR(9),
-  bank_name text,
-  director_name text,
-  accountant_name text,
-  logo_url text
-);
-
--- user_role_assignments
-CREATE TABLE IF NOT EXISTS user_role_assignments (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  tenant_id uuid,
-  user_id uuid NOT NULL,
-  role_id uuid NOT NULL,
-  assigned_at timestamp with time zone DEFAULT now(),
-  assigned_by uuid
-);
-
--- user_tenants
-CREATE TABLE IF NOT EXISTS user_tenants (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL,
-  user_id uuid NOT NULL,
-  is_default boolean DEFAULT false,
-  joined_at timestamp with time zone DEFAULT now()
-);
-
--- users
-CREATE TABLE IF NOT EXISTS users (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  email citext NOT NULL,
-  phone text,
-  pass_hash text NOT NULL,
-  full_name text,
-  avatar_url text,
-  status text DEFAULT 'active',
-  email_verified boolean DEFAULT false,
-  phone_verified boolean DEFAULT false,
-  last_login_at timestamp with time zone,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now()
-);
-
--- vector_index_state
-CREATE TABLE IF NOT EXISTS vector_index_state (
-  document_id VARCHAR(255) NOT NULL,
-  scope VARCHAR(10) NOT NULL,
-  tenant_id uuid,
-  entity_type VARCHAR(20) NOT NULL,
-  db_id text NOT NULL,
-  last_seen_at timestamp with time zone NOT NULL DEFAULT now(),
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now()
-);
-
--- work_completion_act_items
-CREATE TABLE IF NOT EXISTS work_completion_act_items (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  act_id uuid NOT NULL,
-  tenant_id uuid NOT NULL,
-  estimate_item_id uuid NOT NULL,
-  work_id integer,
-  work_code VARCHAR(50),
-  work_name text NOT NULL,
-  section VARCHAR(255),
-  subsection VARCHAR(255),
-  unit VARCHAR(50),
-  planned_quantity numeric,
-  actual_quantity numeric NOT NULL,
-  unit_price numeric NOT NULL,
-  total_price numeric NOT NULL,
-  position_number integer,
-  created_at timestamp with time zone DEFAULT now()
-);
-
--- work_completion_acts
-CREATE TABLE IF NOT EXISTS work_completion_acts (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL,
-  estimate_id uuid NOT NULL,
-  project_id uuid NOT NULL,
-  act_type VARCHAR(20) NOT NULL,
-  act_number VARCHAR(50) NOT NULL,
-  act_date date NOT NULL DEFAULT CURRENT_DATE,
-  period_from date,
-  period_to date,
-  total_amount numeric NOT NULL DEFAULT 0,
-  total_quantity numeric NOT NULL DEFAULT 0,
-  work_count integer DEFAULT 0,
-  status VARCHAR(20) DEFAULT 'draft',
-  notes text,
-  created_at timestamp with time zone DEFAULT now(),
-  created_by uuid,
-  updated_at timestamp with time zone DEFAULT now(),
-  updated_by uuid,
-  contractor_id uuid,
-  contractor_name VARCHAR(500),
-  contractor_inn VARCHAR(12),
-  contractor_kpp VARCHAR(9),
-  contractor_ogrn VARCHAR(15),
-  contractor_address text,
-  customer_id uuid,
-  customer_name VARCHAR(500),
-  customer_inn VARCHAR(12),
-  customer_kpp VARCHAR(9),
-  customer_ogrn VARCHAR(15),
-  customer_address text,
-  contract_number VARCHAR(100),
-  contract_date date,
-  contract_subject text,
-  construction_object VARCHAR(500),
-  construction_address text,
-  construction_okpd VARCHAR(20),
-  form_type VARCHAR(10) DEFAULT 'ks2-ks3',
-  chief_contractor_name VARCHAR(255),
-  chief_contractor_position VARCHAR(255),
-  chief_customer_name VARCHAR(255),
-  chief_customer_position VARCHAR(255),
-  inspector_name VARCHAR(255),
-  inspector_position VARCHAR(255),
-  total_amount_ytd numeric,
-  prev_period_amount numeric,
-  current_period_amount numeric
-);
-
--- work_completions
-CREATE TABLE IF NOT EXISTS work_completions (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  estimate_id uuid NOT NULL,
-  estimate_item_id uuid NOT NULL,
-  tenant_id uuid NOT NULL,
-  completed boolean DEFAULT false,
-  actual_quantity numeric DEFAULT 0,
-  actual_total numeric DEFAULT 0,
-  completion_date timestamp with time zone,
-  notes text,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  created_by uuid,
-  updated_by uuid,
-  last_act_id uuid
-);
-
--- work_hierarchy
-CREATE TABLE IF NOT EXISTS work_hierarchy (
-  id integer NOT NULL DEFAULT nextval('work_hierarchy_id_seq'),
-  level VARCHAR(20) NOT NULL,
-  parent_value VARCHAR(100),
-  value VARCHAR(100) NOT NULL,
-  code VARCHAR(50),
-  sort_order integer DEFAULT 0,
-  is_global boolean DEFAULT false,
-  tenant_id uuid,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now()
-);
-
--- work_materials
-CREATE TABLE IF NOT EXISTS work_materials (
-  id integer NOT NULL DEFAULT nextval('work_materials_id_seq'),
-  work_id integer NOT NULL,
-  material_id integer NOT NULL,
-  consumption numeric NOT NULL DEFAULT 1.0,
-  is_required boolean DEFAULT true,
-  notes text,
-  tenant_id uuid NOT NULL,
-  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-  updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-  created_by uuid,
-  updated_by uuid
-);
-
--- works
-CREATE TABLE IF NOT EXISTS works (
-  id integer NOT NULL DEFAULT nextval('works_id_seq'),
-  code VARCHAR(50) NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  unit VARCHAR(50) NOT NULL,
-  base_price numeric NOT NULL DEFAULT 0.00,
-  tenant_id uuid,
-  created_by uuid,
-  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-  updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-  is_global boolean DEFAULT false,
-  phase VARCHAR(100),
-  section VARCHAR(100),
-  subsection VARCHAR(100),
-  category VARCHAR(100),
-  category_id uuid
-);
-
--- =====================================
--- PRIMARY KEYS & UNIQUE CONSTRAINTS
--- =====================================
-
-ALTER TABLE categories ADD CONSTRAINT categories_parent_id_name_tenant_id_is_global_key UNIQUE (parent_id, name, tenant_id, is_global);
-ALTER TABLE categories ADD CONSTRAINT categories_pkey PRIMARY KEY (id);
-ALTER TABLE counterparties ADD CONSTRAINT counterparties_pkey PRIMARY KEY (id);
-ALTER TABLE estimate_items ADD CONSTRAINT estimate_items_pkey PRIMARY KEY (id);
-ALTER TABLE estimates ADD CONSTRAINT estimates_pkey PRIMARY KEY (id);
-ALTER TABLE materials ADD CONSTRAINT materials_pkey PRIMARY KEY (id);
-ALTER TABLE permissions ADD CONSTRAINT permissions_key_unique UNIQUE (key);
-ALTER TABLE permissions ADD CONSTRAINT permissions_pkey PRIMARY KEY (id);
-ALTER TABLE permissions ADD CONSTRAINT permissions_resource_action_unique UNIQUE (resource, action);
-ALTER TABLE projects ADD CONSTRAINT projects_pkey PRIMARY KEY (id);
-ALTER TABLE role_permissions ADD CONSTRAINT role_permissions_unique UNIQUE (role_id, permission_id);
-ALTER TABLE roles ADD CONSTRAINT roles_pkey PRIMARY KEY (id);
-ALTER TABLE schema_version ADD CONSTRAINT schema_version_pkey PRIMARY KEY (id);
-ALTER TABLE sessions ADD CONSTRAINT sessions_pkey PRIMARY KEY (id);
-ALTER TABLE tenants ADD CONSTRAINT tenants_pkey PRIMARY KEY (id);
-ALTER TABLE user_role_assignments ADD CONSTRAINT user_role_assignments_unique UNIQUE (tenant_id, user_id, role_id);
-ALTER TABLE user_tenants ADD CONSTRAINT user_tenants_unique UNIQUE (tenant_id, user_id);
-ALTER TABLE users ADD CONSTRAINT users_email_unique UNIQUE (email);
-ALTER TABLE users ADD CONSTRAINT users_pkey PRIMARY KEY (id);
-ALTER TABLE vector_index_state ADD CONSTRAINT mixedbread_index_state_pkey PRIMARY KEY (document_id);
-ALTER TABLE work_hierarchy ADD CONSTRAINT work_hierarchy_pkey PRIMARY KEY (id);
-ALTER TABLE work_materials ADD CONSTRAINT work_materials_pkey PRIMARY KEY (id);
-ALTER TABLE works ADD CONSTRAINT works_code_scope_unique UNIQUE (code, is_global, tenant_id);
-ALTER TABLE works ADD CONSTRAINT works_pkey PRIMARY KEY (id);
-
--- =====================================
--- FOREIGN KEYS
--- =====================================
-
-ALTER TABLE categories ADD CONSTRAINT categories_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
-ALTER TABLE categories ADD CONSTRAINT categories_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE CASCADE;
-ALTER TABLE materials ADD CONSTRAINT materials_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
-ALTER TABLE work_materials ADD CONSTRAINT work_materials_material_id_fkey FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE;
-ALTER TABLE work_materials ADD CONSTRAINT work_materials_work_id_fkey FOREIGN KEY (work_id) REFERENCES works(id) ON DELETE CASCADE;
-ALTER TABLE works ADD CONSTRAINT works_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
-ALTER TABLE works ADD CONSTRAINT works_category_id_fkey FOREIGN KEY (category_id) REFERENCES categories(id);
-
--- =====================================
--- ИНДЕКСЫ
--- =====================================
-
-CREATE INDEX IF NOT EXISTS idx_act_signatories_act_id ON public.act_signatories USING btree (act_id);
-CREATE INDEX IF NOT EXISTS idx_act_signatories_role ON public.act_signatories USING btree (role);
-CREATE INDEX IF NOT EXISTS idx_act_signatories_tenant_id ON public.act_signatories USING btree (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_categories_parent ON public.categories USING btree (parent_id);
-CREATE INDEX IF NOT EXISTS idx_categories_tenant ON public.categories USING btree (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_categories_type ON public.categories USING btree (type);
-CREATE INDEX IF NOT EXISTS idx_contracts_contract_date ON public.contracts USING btree (contract_date DESC);
-CREATE INDEX IF NOT EXISTS idx_contracts_contract_number ON public.contracts USING btree (contract_number);
-CREATE INDEX IF NOT EXISTS idx_contracts_contractor_id ON public.contracts USING btree (contractor_id);
-CREATE INDEX IF NOT EXISTS idx_contracts_created_at ON public.contracts USING btree (created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_contracts_customer_id ON public.contracts USING btree (customer_id);
-CREATE INDEX IF NOT EXISTS idx_contracts_estimate_id ON public.contracts USING btree (estimate_id);
-CREATE INDEX IF NOT EXISTS idx_contracts_estimate_status ON public.contracts USING btree (estimate_id, status);
-CREATE INDEX IF NOT EXISTS idx_contracts_project_id ON public.contracts USING btree (project_id);
-CREATE INDEX IF NOT EXISTS idx_contracts_status ON public.contracts USING btree (status);
-CREATE INDEX IF NOT EXISTS idx_contracts_template_data ON public.contracts USING gin (template_data);
-CREATE INDEX IF NOT EXISTS idx_contracts_tenant_id ON public.contracts USING btree (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_counterparties_company_name ON public.counterparties USING btree (company_name) WHERE ((entity_type)::text = 'legal'::text);
-CREATE INDEX IF NOT EXISTS idx_counterparties_email ON public.counterparties USING btree (email);
-CREATE INDEX IF NOT EXISTS idx_counterparties_entity_type ON public.counterparties USING btree (entity_type);
-CREATE INDEX IF NOT EXISTS idx_counterparties_full_name ON public.counterparties USING btree (full_name) WHERE ((entity_type)::text = 'individual'::text);
-CREATE INDEX IF NOT EXISTS idx_counterparties_inn ON public.counterparties USING btree (inn) WHERE ((entity_type)::text = 'legal'::text);
-CREATE INDEX IF NOT EXISTS idx_counterparties_phone ON public.counterparties USING btree (phone);
-CREATE INDEX IF NOT EXISTS idx_counterparties_tenant_id ON public.counterparties USING btree (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_expires_at ON public.email_verification_tokens USING btree (expires_at);
-CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_token ON public.email_verification_tokens USING btree (token);
-CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_user_id ON public.email_verification_tokens USING btree (user_id);
-CREATE INDEX IF NOT EXISTS idx_email_verifications_email ON public.email_verifications USING btree (email);
-CREATE INDEX IF NOT EXISTS idx_email_verifications_expires_at ON public.email_verifications USING btree (expires_at);
-CREATE INDEX IF NOT EXISTS idx_email_verifications_token ON public.email_verifications USING btree (token);
-CREATE INDEX IF NOT EXISTS idx_email_verifications_user_id ON public.email_verifications USING btree (user_id);
-CREATE INDEX IF NOT EXISTS idx_estimate_item_materials_item_id ON public.estimate_item_materials USING btree (estimate_item_id);
-CREATE INDEX IF NOT EXISTS idx_estimate_item_materials_material_id ON public.estimate_item_materials USING btree (material_id);
-CREATE UNIQUE INDEX idx_estimate_item_materials_unique ON public.estimate_item_materials USING btree (estimate_item_id, material_id);
-CREATE INDEX IF NOT EXISTS idx_estimate_item_materials_weight ON public.estimate_item_materials USING btree (weight) WHERE (weight > (0)::numeric);
-CREATE INDEX IF NOT EXISTS idx_estimate_items_estimate_id ON public.estimate_items USING btree (estimate_id);
-CREATE INDEX IF NOT EXISTS idx_estimate_items_item_type ON public.estimate_items USING btree (item_type);
-CREATE INDEX IF NOT EXISTS idx_estimate_items_position ON public.estimate_items USING btree (estimate_id, position_number);
-CREATE INDEX IF NOT EXISTS idx_estimate_template_materials_material_id ON public.estimate_template_materials USING btree (material_id);
-CREATE INDEX IF NOT EXISTS idx_estimate_template_materials_sort_order ON public.estimate_template_materials USING btree (template_id, sort_order);
-CREATE INDEX IF NOT EXISTS idx_estimate_template_materials_template_id ON public.estimate_template_materials USING btree (template_id);
-CREATE INDEX IF NOT EXISTS idx_estimate_template_works_sort_order ON public.estimate_template_works USING btree (template_id, sort_order);
-CREATE INDEX IF NOT EXISTS idx_estimate_template_works_template_id ON public.estimate_template_works USING btree (template_id);
-CREATE INDEX IF NOT EXISTS idx_estimate_template_works_work_id ON public.estimate_template_works USING btree (work_id);
-CREATE INDEX IF NOT EXISTS idx_estimate_templates_category ON public.estimate_templates USING btree (category);
-CREATE INDEX IF NOT EXISTS idx_estimate_templates_created_by ON public.estimate_templates USING btree (created_by);
-CREATE INDEX IF NOT EXISTS idx_estimate_templates_tenant_id ON public.estimate_templates USING btree (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_estimates_created_at ON public.estimates USING btree (created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_estimates_created_by ON public.estimates USING btree (created_by);
-CREATE INDEX IF NOT EXISTS idx_estimates_estimate_date ON public.estimates USING btree (estimate_date DESC);
-CREATE INDEX IF NOT EXISTS idx_estimates_name_gin ON public.estimates USING gin (name gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_estimates_project_id ON public.estimates USING btree (project_id);
-CREATE INDEX IF NOT EXISTS idx_estimates_project_status ON public.estimates USING btree (project_id, status);
-CREATE INDEX IF NOT EXISTS idx_estimates_status ON public.estimates USING btree (status);
-CREATE INDEX IF NOT EXISTS idx_estimates_tenant_id ON public.estimates USING btree (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_estimates_tenant_project ON public.estimates USING btree (tenant_id, project_id);
-CREATE INDEX IF NOT EXISTS idx_estimates_tenant_status ON public.estimates USING btree (tenant_id, status);
-CREATE INDEX IF NOT EXISTS idx_global_purchases_date ON public.global_purchases USING btree (purchase_date DESC);
-CREATE INDEX IF NOT EXISTS idx_global_purchases_estimate ON public.global_purchases USING btree (estimate_id);
-CREATE INDEX IF NOT EXISTS idx_global_purchases_material ON public.global_purchases USING btree (material_id);
-CREATE INDEX IF NOT EXISTS idx_global_purchases_project ON public.global_purchases USING btree (project_id);
-CREATE INDEX IF NOT EXISTS idx_global_purchases_tenant ON public.global_purchases USING btree (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_global_purchases_tenant_date ON public.global_purchases USING btree (tenant_id, purchase_date DESC);
-CREATE INDEX IF NOT EXISTS idx_materials_category ON public.materials USING btree (category);
-CREATE INDEX IF NOT EXISTS idx_materials_category_gin ON public.materials USING gin (category gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_materials_category_global ON public.materials USING btree (category, is_global, sku_number);
-CREATE INDEX IF NOT EXISTS idx_materials_global_only ON public.materials USING btree (sku_number) WHERE (is_global = true);
-CREATE INDEX IF NOT EXISTS idx_materials_is_global ON public.materials USING btree (is_global);
-CREATE INDEX IF NOT EXISTS idx_materials_is_global_category ON public.materials USING btree (is_global, category);
-CREATE INDEX IF NOT EXISTS idx_materials_is_global_sku ON public.materials USING btree (is_global DESC, sku);
-CREATE INDEX IF NOT EXISTS idx_materials_name_trgm ON public.materials USING gin (lower((name)::text) gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_materials_sku ON public.materials USING btree (sku);
-CREATE INDEX IF NOT EXISTS idx_materials_sku_trgm ON public.materials USING gin (lower((sku)::text) gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_materials_supplier_trgm ON public.materials USING gin (lower((supplier)::text) gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_materials_tenant_id ON public.materials USING btree (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_materials_tenant_only ON public.materials USING btree (tenant_id, sku_number) WHERE (is_global = false);
-CREATE INDEX IF NOT EXISTS idx_object_openings_tenant_parameter ON public.object_openings USING btree (tenant_id, parameter_id);
-CREATE INDEX IF NOT EXISTS idx_object_parameters_tenant_estimate ON public.object_parameters USING btree (tenant_id, estimate_id);
-CREATE INDEX IF NOT EXISTS idx_password_resets_email ON public.password_resets USING btree (email);
-CREATE INDEX IF NOT EXISTS idx_password_resets_expires_at ON public.password_resets USING btree (expires_at);
-CREATE INDEX IF NOT EXISTS idx_password_resets_token ON public.password_resets USING btree (token);
-CREATE INDEX IF NOT EXISTS idx_password_resets_user_id ON public.password_resets USING btree (user_id);
-CREATE INDEX IF NOT EXISTS idx_permissions_is_hidden ON public.permissions USING btree (is_hidden);
-CREATE INDEX IF NOT EXISTS idx_team_active ON public.project_team_members USING btree (project_id) WHERE (left_at IS NULL);
-CREATE INDEX IF NOT EXISTS idx_team_project_id ON public.project_team_members USING btree (project_id);
-CREATE INDEX IF NOT EXISTS idx_team_project_user ON public.project_team_members USING btree (project_id, user_id);
-CREATE INDEX IF NOT EXISTS idx_team_role ON public.project_team_members USING btree (role);
-CREATE INDEX IF NOT EXISTS idx_team_tenant_id ON public.project_team_members USING btree (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_team_tenant_project ON public.project_team_members USING btree (tenant_id, project_id);
-CREATE INDEX IF NOT EXISTS idx_team_user_id ON public.project_team_members USING btree (user_id);
-CREATE INDEX IF NOT EXISTS idx_projects_client_gin ON public.projects USING gin (client gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_projects_contract_number ON public.projects USING btree (contract_number) WHERE (contract_number IS NOT NULL);
-CREATE INDEX IF NOT EXISTS idx_projects_contractor_gin ON public.projects USING gin (contractor gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_projects_created_at ON public.projects USING btree (created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_projects_created_by ON public.projects USING btree (created_by);
-CREATE INDEX IF NOT EXISTS idx_projects_end_date ON public.projects USING btree (end_date);
-CREATE INDEX IF NOT EXISTS idx_projects_manager_id ON public.projects USING btree (manager_id);
-CREATE INDEX IF NOT EXISTS idx_projects_name_gin ON public.projects USING gin (name gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_projects_object_name_gin ON public.projects USING gin (object_name gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_projects_start_date ON public.projects USING btree (start_date);
-CREATE INDEX IF NOT EXISTS idx_projects_status ON public.projects USING btree (status);
-CREATE UNIQUE INDEX idx_projects_tenant_contract_number ON public.projects USING btree (tenant_id, contract_number) WHERE (contract_number IS NOT NULL);
-CREATE INDEX IF NOT EXISTS idx_projects_tenant_created_at ON public.projects USING btree (tenant_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_projects_tenant_id ON public.projects USING btree (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_projects_tenant_status ON public.projects USING btree (tenant_id, status);
-CREATE INDEX IF NOT EXISTS idx_purchases_with_remainder ON public.purchases USING btree (estimate_id) WHERE ((quantity - purchased_quantity) > (0)::numeric);
-CREATE INDEX IF NOT EXISTS idx_role_permissions_is_hidden ON public.role_permissions USING btree (role_id, is_hidden);
-CREATE INDEX IF NOT EXISTS idx_role_permissions_permission_id ON public.role_permissions USING btree (permission_id);
-CREATE INDEX IF NOT EXISTS idx_role_permissions_role_id ON public.role_permissions USING btree (role_id);
-CREATE UNIQUE INDEX idx_roles_key_global ON public.roles USING btree (key) WHERE (tenant_id IS NULL);
-CREATE UNIQUE INDEX idx_roles_key_tenant ON public.roles USING btree (key, tenant_id) WHERE (tenant_id IS NOT NULL);
-CREATE INDEX IF NOT EXISTS idx_schedules_created_at ON public.schedules USING btree (created_at);
-CREATE INDEX IF NOT EXISTS idx_schedules_estimate_id ON public.schedules USING btree (estimate_id);
-CREATE INDEX IF NOT EXISTS idx_schedules_estimate_phase_position ON public.schedules USING btree (estimate_id, phase, position_number);
-CREATE INDEX IF NOT EXISTS idx_schedules_phase ON public.schedules USING btree (phase);
-CREATE INDEX IF NOT EXISTS idx_schedules_position ON public.schedules USING btree (position_number);
-CREATE INDEX IF NOT EXISTS idx_schedules_project_id ON public.schedules USING btree (project_id);
-CREATE INDEX IF NOT EXISTS idx_schedules_tenant_id ON public.schedules USING btree (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON public.sessions USING btree (expires_at);
-CREATE INDEX IF NOT EXISTS idx_sessions_refresh_token ON public.sessions USING btree (refresh_token);
-CREATE INDEX IF NOT EXISTS idx_sessions_tenant_id ON public.sessions USING btree (tenant_id) WHERE (tenant_id IS NOT NULL);
-CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON public.sessions USING btree (user_id);
-CREATE INDEX IF NOT EXISTS idx_tenants_inn ON public.tenants USING btree (inn) WHERE (inn IS NOT NULL);
-CREATE INDEX IF NOT EXISTS idx_tenants_ogrn ON public.tenants USING btree (ogrn) WHERE (ogrn IS NOT NULL);
-CREATE INDEX IF NOT EXISTS idx_user_role_assignments_role_id ON public.user_role_assignments USING btree (role_id);
-CREATE INDEX IF NOT EXISTS idx_user_role_assignments_tenant_user ON public.user_role_assignments USING btree (tenant_id, user_id);
-CREATE INDEX IF NOT EXISTS idx_user_role_assignments_user_id ON public.user_role_assignments USING btree (user_id);
-CREATE INDEX IF NOT EXISTS idx_user_tenants_default ON public.user_tenants USING btree (user_id, is_default) WHERE (is_default = true);
-CREATE INDEX IF NOT EXISTS idx_user_tenants_tenant_id ON public.user_tenants USING btree (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_user_tenants_user_id ON public.user_tenants USING btree (user_id);
-CREATE INDEX IF NOT EXISTS idx_users_created_at ON public.users USING btree (created_at);
-CREATE INDEX IF NOT EXISTS idx_users_email ON public.users USING btree (email);
-CREATE INDEX IF NOT EXISTS idx_users_phone ON public.users USING btree (phone) WHERE (phone IS NOT NULL);
-CREATE INDEX IF NOT EXISTS idx_users_status ON public.users USING btree (status);
-CREATE INDEX IF NOT EXISTS idx_mixedbread_state_entity_type ON public.vector_index_state USING btree (entity_type, scope);
-CREATE INDEX IF NOT EXISTS idx_mixedbread_state_scope_tenant ON public.vector_index_state USING btree (scope, tenant_id, last_seen_at);
-CREATE INDEX IF NOT EXISTS idx_mixedbread_state_tenant_id ON public.vector_index_state USING btree (tenant_id) WHERE (tenant_id IS NOT NULL);
-CREATE INDEX IF NOT EXISTS idx_vector_index_state_entity ON public.vector_index_state USING btree (entity_type, db_id);
-CREATE INDEX IF NOT EXISTS idx_vector_index_state_last_seen ON public.vector_index_state USING btree (last_seen_at);
-CREATE INDEX IF NOT EXISTS idx_vector_index_state_scope ON public.vector_index_state USING btree (scope);
-CREATE INDEX IF NOT EXISTS idx_vector_index_state_tenant ON public.vector_index_state USING btree (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_act_items_act_id ON public.work_completion_act_items USING btree (act_id);
-CREATE INDEX IF NOT EXISTS idx_act_items_estimate_item_id ON public.work_completion_act_items USING btree (estimate_item_id);
-CREATE INDEX IF NOT EXISTS idx_act_items_section ON public.work_completion_act_items USING btree (section);
-CREATE INDEX IF NOT EXISTS idx_act_items_tenant_id ON public.work_completion_act_items USING btree (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_acts_contract_number ON public.work_completion_acts USING btree (contract_number);
-CREATE INDEX IF NOT EXISTS idx_acts_contractor_id ON public.work_completion_acts USING btree (contractor_id);
-CREATE INDEX IF NOT EXISTS idx_acts_customer_id ON public.work_completion_acts USING btree (customer_id);
-CREATE INDEX IF NOT EXISTS idx_acts_date ON public.work_completion_acts USING btree (act_date);
-CREATE INDEX IF NOT EXISTS idx_acts_estimate_id ON public.work_completion_acts USING btree (estimate_id);
-CREATE INDEX IF NOT EXISTS idx_acts_form_type ON public.work_completion_acts USING btree (form_type);
-CREATE INDEX IF NOT EXISTS idx_acts_project_id ON public.work_completion_acts USING btree (project_id);
-CREATE INDEX IF NOT EXISTS idx_acts_status ON public.work_completion_acts USING btree (status);
-CREATE INDEX IF NOT EXISTS idx_acts_tenant_id ON public.work_completion_acts USING btree (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_acts_type ON public.work_completion_acts USING btree (act_type);
-CREATE INDEX IF NOT EXISTS idx_work_completions_completed ON public.work_completions USING btree (completed);
-CREATE INDEX IF NOT EXISTS idx_work_completions_estimate_id ON public.work_completions USING btree (estimate_id);
-CREATE INDEX IF NOT EXISTS idx_work_completions_tenant_id ON public.work_completions USING btree (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_work_materials_composite ON public.work_materials USING btree (work_id, tenant_id);
-CREATE INDEX IF NOT EXISTS idx_work_materials_material_id ON public.work_materials USING btree (material_id);
-CREATE INDEX IF NOT EXISTS idx_work_materials_tenant_id ON public.work_materials USING btree (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_work_materials_work_id ON public.work_materials USING btree (work_id);
-CREATE INDEX IF NOT EXISTS idx_works_category ON public.works USING btree (category);
-CREATE INDEX IF NOT EXISTS idx_works_category_gin ON public.works USING gin (category gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_works_code ON public.works USING btree (code);
-CREATE INDEX IF NOT EXISTS idx_works_code_gin ON public.works USING gin (code gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_works_global_code ON public.works USING btree (code) WHERE (is_global = true);
-CREATE INDEX IF NOT EXISTS idx_works_hierarchy ON public.works USING btree (phase, section, subsection) WHERE (phase IS NOT NULL);
-CREATE INDEX IF NOT EXISTS idx_works_is_global ON public.works USING btree (is_global);
-CREATE INDEX IF NOT EXISTS idx_works_is_global_category ON public.works USING btree (is_global, category);
-CREATE INDEX IF NOT EXISTS idx_works_is_global_code ON public.works USING btree (is_global DESC, code);
-CREATE INDEX IF NOT EXISTS idx_works_name_gin ON public.works USING gin (name gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_works_phase ON public.works USING btree (phase) WHERE (phase IS NOT NULL);
-CREATE INDEX IF NOT EXISTS idx_works_section ON public.works USING btree (section) WHERE (section IS NOT NULL);
-CREATE INDEX IF NOT EXISTS idx_works_subsection ON public.works USING btree (subsection) WHERE (subsection IS NOT NULL);
-CREATE INDEX IF NOT EXISTS idx_works_tenant_code ON public.works USING btree (tenant_id, code) WHERE (is_global = false);
+CREATE SEQUENCE IF NOT EXISTS "works_id_seq";
+CREATE SEQUENCE IF NOT EXISTS "materials_id_seq";
+CREATE SEQUENCE IF NOT EXISTS "work_hierarchy_id_seq";
+CREATE SEQUENCE IF NOT EXISTS "work_materials_id_seq";
 
 -- =====================================
 -- ФУНКЦИИ
@@ -2035,6 +1175,875 @@ CREATE OR REPLACE FUNCTION public.word_similarity_op(text, text)
  STABLE PARALLEL SAFE STRICT
 AS '$libdir/pg_trgm', $function$word_similarity_op$function$
 ;
+
+-- =====================================
+-- ТАБЛИЦЫ
+-- =====================================
+
+-- act_signatories
+CREATE TABLE IF NOT EXISTS act_signatories (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  act_id uuid NOT NULL,
+  tenant_id uuid NOT NULL,
+  role VARCHAR(50) NOT NULL,
+  full_name VARCHAR(255) NOT NULL,
+  position VARCHAR(255),
+  signed_at date,
+  created_at timestamp with time zone DEFAULT now()
+);
+
+-- categories
+CREATE TABLE IF NOT EXISTS categories (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  parent_id uuid,
+  name text NOT NULL,
+  type text DEFAULT 'work',
+  tenant_id uuid,
+  is_global boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+);
+
+-- contracts
+CREATE TABLE IF NOT EXISTS contracts (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  project_id uuid NOT NULL,
+  estimate_id uuid NOT NULL,
+  contract_number VARCHAR(50) NOT NULL,
+  contract_date date NOT NULL DEFAULT CURRENT_DATE,
+  customer_id uuid,
+  contractor_id uuid,
+  total_amount numeric NOT NULL DEFAULT 0.00,
+  materials_amount numeric DEFAULT 0.00,
+  warranty_period VARCHAR(100) DEFAULT '1 год',
+  status VARCHAR(50) NOT NULL DEFAULT 'draft',
+  template_data jsonb NOT NULL DEFAULT '{}',
+  file_url text,
+  created_at timestamp with time zone DEFAULT now(),
+  created_by uuid,
+  updated_at timestamp with time zone DEFAULT now(),
+  updated_by uuid
+);
+
+-- counterparties
+CREATE TABLE IF NOT EXISTS counterparties (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  entity_type VARCHAR(20) NOT NULL,
+  full_name VARCHAR(255),
+  birth_date date,
+  birth_place text,
+  passport_series_number VARCHAR(50),
+  passport_issued_by text,
+  passport_issue_date date,
+  registration_address text,
+  company_name VARCHAR(500),
+  inn VARCHAR(12),
+  ogrn VARCHAR(15),
+  kpp VARCHAR(9),
+  legal_address text,
+  actual_address text,
+  bank_account VARCHAR(20),
+  correspondent_account VARCHAR(20),
+  bank_bik VARCHAR(9),
+  bank_name VARCHAR(500),
+  director_name VARCHAR(255),
+  accountant_name VARCHAR(255),
+  phone VARCHAR(50),
+  email VARCHAR(255),
+  created_at timestamp with time zone DEFAULT now(),
+  created_by uuid,
+  updated_at timestamp with time zone DEFAULT now(),
+  updated_by uuid,
+  passport_series VARCHAR(4),
+  passport_number VARCHAR(6),
+  passport_issued_by_code VARCHAR(7)
+);
+
+-- email_verification_tokens
+CREATE TABLE IF NOT EXISTS email_verification_tokens (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  token VARCHAR(64) NOT NULL,
+  expires_at timestamp with time zone NOT NULL,
+  created_at timestamp with time zone DEFAULT now()
+);
+
+-- email_verifications
+CREATE TABLE IF NOT EXISTS email_verifications (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  email citext NOT NULL,
+  token text NOT NULL,
+  expires_at timestamp with time zone NOT NULL,
+  verified_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now()
+);
+
+-- estimate_item_materials
+CREATE TABLE IF NOT EXISTS estimate_item_materials (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  estimate_item_id uuid NOT NULL,
+  material_id integer NOT NULL,
+  quantity numeric NOT NULL,
+  unit_price numeric NOT NULL,
+  total_price numeric,
+  consumption_coefficient numeric DEFAULT 1.0,
+  is_required boolean DEFAULT true,
+  notes text,
+  created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  auto_calculate boolean DEFAULT true,
+  weight numeric DEFAULT 0,
+  total_weight numeric
+);
+
+-- estimate_items
+CREATE TABLE IF NOT EXISTS estimate_items (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  estimate_id uuid NOT NULL,
+  position_number integer NOT NULL,
+  item_type VARCHAR(50) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  description text,
+  code VARCHAR(100),
+  unit VARCHAR(50) NOT NULL,
+  quantity numeric NOT NULL,
+  unit_price numeric NOT NULL,
+  total_price numeric,
+  overhead_percent numeric DEFAULT 0,
+  profit_percent numeric DEFAULT 0,
+  tax_percent numeric DEFAULT 0,
+  final_price numeric,
+  notes text,
+  is_optional boolean DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  source_type text NOT NULL DEFAULT 'tenant',
+  phase VARCHAR(100),
+  section VARCHAR(100),
+  subsection VARCHAR(100),
+  work_id integer
+);
+
+-- estimate_template_materials
+CREATE TABLE IF NOT EXISTS estimate_template_materials (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  template_id uuid NOT NULL,
+  material_id integer NOT NULL,
+  quantity numeric NOT NULL DEFAULT 1,
+  notes text,
+  sort_order integer DEFAULT 0,
+  created_at timestamp without time zone DEFAULT now(),
+  template_work_id uuid
+);
+
+-- estimate_template_works
+CREATE TABLE IF NOT EXISTS estimate_template_works (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  template_id uuid NOT NULL,
+  work_id integer NOT NULL,
+  quantity numeric NOT NULL DEFAULT 1,
+  phase VARCHAR(100),
+  section VARCHAR(100),
+  subsection VARCHAR(100),
+  notes text,
+  sort_order integer DEFAULT 0,
+  created_at timestamp without time zone DEFAULT now()
+);
+
+-- estimate_templates
+CREATE TABLE IF NOT EXISTS estimate_templates (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  description text,
+  category VARCHAR(100),
+  created_by uuid,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now()
+);
+
+-- estimates
+CREATE TABLE IF NOT EXISTS estimates (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  project_id uuid NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  description text,
+  estimate_type VARCHAR(50) NOT NULL,
+  status VARCHAR(50) NOT NULL DEFAULT 'draft',
+  total_amount numeric DEFAULT 0.00,
+  currency VARCHAR(10) DEFAULT 'RUB',
+  estimate_date date NOT NULL DEFAULT CURRENT_DATE,
+  valid_until date,
+  approved_at timestamp with time zone,
+  approved_by uuid,
+  created_by uuid NOT NULL,
+  updated_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+);
+
+-- global_purchases
+CREATE TABLE IF NOT EXISTS global_purchases (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  project_id uuid NOT NULL,
+  estimate_id uuid NOT NULL,
+  material_id integer NOT NULL,
+  material_sku VARCHAR(100),
+  material_name text NOT NULL,
+  material_image text,
+  unit VARCHAR(50) NOT NULL,
+  category VARCHAR(255),
+  quantity numeric NOT NULL,
+  purchase_price numeric NOT NULL,
+  total_price numeric NOT NULL,
+  source_purchase_id uuid,
+  purchase_date date NOT NULL DEFAULT CURRENT_DATE,
+  project_name text,
+  estimate_name text,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  is_extra_charge boolean DEFAULT false
+);
+
+-- materials
+CREATE TABLE IF NOT EXISTS materials (
+  id integer NOT NULL DEFAULT nextval('materials_id_seq'),
+  sku VARCHAR(100) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  image text,
+  unit VARCHAR(50) NOT NULL,
+  price numeric NOT NULL DEFAULT 0.00,
+  supplier VARCHAR(255),
+  weight numeric,
+  category VARCHAR(100) NOT NULL,
+  product_url text,
+  show_image boolean DEFAULT true,
+  tenant_id uuid,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  is_global boolean DEFAULT false,
+  auto_calculate boolean DEFAULT true,
+  consumption numeric DEFAULT 0,
+  consumption_unit VARCHAR(50),
+  sku_number integer
+);
+
+-- object_openings
+CREATE TABLE IF NOT EXISTS object_openings (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  parameter_id uuid NOT NULL,
+  opening_type VARCHAR(50) NOT NULL,
+  position_number integer NOT NULL,
+  height numeric NOT NULL,
+  width numeric NOT NULL,
+  slope_length numeric,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+);
+
+-- object_parameters
+CREATE TABLE IF NOT EXISTS object_parameters (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  estimate_id uuid NOT NULL,
+  position_number integer NOT NULL,
+  room_name VARCHAR(255) NOT NULL,
+  perimeter numeric,
+  height numeric,
+  floor_area numeric,
+  wall_area numeric,
+  ceiling_area numeric,
+  ceiling_slopes numeric,
+  doors_count integer DEFAULT 0,
+  baseboards numeric,
+  total_window_slopes numeric DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  created_by uuid,
+  updated_by uuid
+);
+
+-- password_resets
+CREATE TABLE IF NOT EXISTS password_resets (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  email citext NOT NULL,
+  token text NOT NULL,
+  expires_at timestamp with time zone NOT NULL,
+  used_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now()
+);
+
+-- permissions
+CREATE TABLE IF NOT EXISTS permissions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  key text NOT NULL,
+  name text NOT NULL,
+  description text,
+  resource text NOT NULL,
+  action text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  is_hidden boolean DEFAULT false
+);
+
+-- project_team_members
+CREATE TABLE IF NOT EXISTS project_team_members (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  project_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  tenant_id uuid NOT NULL,
+  role VARCHAR(100) NOT NULL,
+  responsibilities text,
+  can_edit boolean DEFAULT false,
+  can_view_financials boolean DEFAULT false,
+  joined_at timestamp with time zone NOT NULL DEFAULT now(),
+  left_at timestamp with time zone,
+  added_by uuid
+);
+
+-- projects
+CREATE TABLE IF NOT EXISTS projects (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  object_name VARCHAR(255) NOT NULL,
+  description text,
+  client VARCHAR(255) NOT NULL,
+  contractor VARCHAR(255) NOT NULL,
+  address text NOT NULL,
+  start_date date,
+  end_date date,
+  actual_end_date date,
+  status VARCHAR(50) NOT NULL DEFAULT 'planning',
+  progress integer NOT NULL DEFAULT 0,
+  budget numeric DEFAULT 0.00,
+  actual_cost numeric DEFAULT 0.00,
+  created_by uuid,
+  updated_by uuid,
+  manager_id uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  contract_number VARCHAR(50)
+);
+
+-- purchases
+CREATE TABLE IF NOT EXISTS purchases (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  project_id uuid NOT NULL,
+  estimate_id uuid NOT NULL,
+  material_id integer NOT NULL,
+  material_sku VARCHAR(100),
+  material_name text NOT NULL,
+  category VARCHAR(255),
+  unit VARCHAR(50) NOT NULL,
+  quantity numeric NOT NULL DEFAULT 0,
+  unit_price numeric NOT NULL DEFAULT 0,
+  total_price numeric NOT NULL DEFAULT 0,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  material_image text,
+  purchased_quantity numeric DEFAULT 0,
+  is_extra_charge boolean DEFAULT false
+);
+
+-- role_permissions
+CREATE TABLE IF NOT EXISTS role_permissions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  role_id uuid NOT NULL,
+  permission_id uuid NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  is_hidden boolean DEFAULT false
+);
+
+-- roles
+CREATE TABLE IF NOT EXISTS roles (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  key text NOT NULL,
+  name text NOT NULL,
+  description text,
+  is_system boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  tenant_id uuid
+);
+
+-- schedules
+CREATE TABLE IF NOT EXISTS schedules (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  project_id uuid NOT NULL,
+  estimate_id uuid NOT NULL,
+  phase VARCHAR(255) NOT NULL,
+  work_id uuid,
+  work_code VARCHAR(50),
+  work_name text NOT NULL,
+  unit VARCHAR(50) NOT NULL,
+  quantity numeric NOT NULL DEFAULT 0,
+  unit_price numeric NOT NULL DEFAULT 0,
+  total_price numeric NOT NULL DEFAULT 0,
+  position_number integer NOT NULL DEFAULT 0,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+);
+
+-- schema_version
+CREATE TABLE IF NOT EXISTS schema_version (
+  id integer NOT NULL,
+  applied_at timestamp with time zone NOT NULL DEFAULT now(),
+  description text NOT NULL
+);
+
+-- sessions
+CREATE TABLE IF NOT EXISTS sessions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  tenant_id uuid,
+  refresh_token text NOT NULL,
+  device_info text,
+  ip_address inet,
+  expires_at timestamp with time zone NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  last_used_at timestamp with time zone DEFAULT now()
+);
+
+-- tenants
+CREATE TABLE IF NOT EXISTS tenants (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  plan text DEFAULT 'free',
+  status text DEFAULT 'active',
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  company_full_name text,
+  inn VARCHAR(12),
+  ogrn VARCHAR(15),
+  kpp VARCHAR(9),
+  legal_address text,
+  actual_address text,
+  bank_account VARCHAR(20),
+  correspondent_account VARCHAR(20),
+  bank_bik VARCHAR(9),
+  bank_name text,
+  director_name text,
+  accountant_name text,
+  logo_url text
+);
+
+-- user_role_assignments
+CREATE TABLE IF NOT EXISTS user_role_assignments (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id uuid,
+  user_id uuid NOT NULL,
+  role_id uuid NOT NULL,
+  assigned_at timestamp with time zone DEFAULT now(),
+  assigned_by uuid
+);
+
+-- user_tenants
+CREATE TABLE IF NOT EXISTS user_tenants (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  is_default boolean DEFAULT false,
+  joined_at timestamp with time zone DEFAULT now()
+);
+
+-- users
+CREATE TABLE IF NOT EXISTS users (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  email citext NOT NULL,
+  phone text,
+  pass_hash text NOT NULL,
+  full_name text,
+  avatar_url text,
+  status text DEFAULT 'active',
+  email_verified boolean DEFAULT false,
+  phone_verified boolean DEFAULT false,
+  last_login_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+);
+
+-- vector_index_state
+CREATE TABLE IF NOT EXISTS vector_index_state (
+  document_id VARCHAR(255) NOT NULL,
+  scope VARCHAR(10) NOT NULL,
+  tenant_id uuid,
+  entity_type VARCHAR(20) NOT NULL,
+  db_id text NOT NULL,
+  last_seen_at timestamp with time zone NOT NULL DEFAULT now(),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+);
+
+-- work_completion_act_items
+CREATE TABLE IF NOT EXISTS work_completion_act_items (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  act_id uuid NOT NULL,
+  tenant_id uuid NOT NULL,
+  estimate_item_id uuid NOT NULL,
+  work_id integer,
+  work_code VARCHAR(50),
+  work_name text NOT NULL,
+  section VARCHAR(255),
+  subsection VARCHAR(255),
+  unit VARCHAR(50),
+  planned_quantity numeric,
+  actual_quantity numeric NOT NULL,
+  unit_price numeric NOT NULL,
+  total_price numeric NOT NULL,
+  position_number integer,
+  created_at timestamp with time zone DEFAULT now()
+);
+
+-- work_completion_acts
+CREATE TABLE IF NOT EXISTS work_completion_acts (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  estimate_id uuid NOT NULL,
+  project_id uuid NOT NULL,
+  act_type VARCHAR(20) NOT NULL,
+  act_number VARCHAR(50) NOT NULL,
+  act_date date NOT NULL DEFAULT CURRENT_DATE,
+  period_from date,
+  period_to date,
+  total_amount numeric NOT NULL DEFAULT 0,
+  total_quantity numeric NOT NULL DEFAULT 0,
+  work_count integer DEFAULT 0,
+  status VARCHAR(20) DEFAULT 'draft',
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  created_by uuid,
+  updated_at timestamp with time zone DEFAULT now(),
+  updated_by uuid,
+  contractor_id uuid,
+  contractor_name VARCHAR(500),
+  contractor_inn VARCHAR(12),
+  contractor_kpp VARCHAR(9),
+  contractor_ogrn VARCHAR(15),
+  contractor_address text,
+  customer_id uuid,
+  customer_name VARCHAR(500),
+  customer_inn VARCHAR(12),
+  customer_kpp VARCHAR(9),
+  customer_ogrn VARCHAR(15),
+  customer_address text,
+  contract_number VARCHAR(100),
+  contract_date date,
+  contract_subject text,
+  construction_object VARCHAR(500),
+  construction_address text,
+  construction_okpd VARCHAR(20),
+  form_type VARCHAR(10) DEFAULT 'ks2-ks3',
+  chief_contractor_name VARCHAR(255),
+  chief_contractor_position VARCHAR(255),
+  chief_customer_name VARCHAR(255),
+  chief_customer_position VARCHAR(255),
+  inspector_name VARCHAR(255),
+  inspector_position VARCHAR(255),
+  total_amount_ytd numeric,
+  prev_period_amount numeric,
+  current_period_amount numeric
+);
+
+-- work_completions
+CREATE TABLE IF NOT EXISTS work_completions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  estimate_id uuid NOT NULL,
+  estimate_item_id uuid NOT NULL,
+  tenant_id uuid NOT NULL,
+  completed boolean DEFAULT false,
+  actual_quantity numeric DEFAULT 0,
+  actual_total numeric DEFAULT 0,
+  completion_date timestamp with time zone,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  created_by uuid,
+  updated_by uuid,
+  last_act_id uuid
+);
+
+-- work_hierarchy
+CREATE TABLE IF NOT EXISTS work_hierarchy (
+  id integer NOT NULL DEFAULT nextval('work_hierarchy_id_seq'),
+  level VARCHAR(20) NOT NULL,
+  parent_value VARCHAR(100),
+  value VARCHAR(100) NOT NULL,
+  code VARCHAR(50),
+  sort_order integer DEFAULT 0,
+  is_global boolean DEFAULT false,
+  tenant_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+);
+
+-- work_materials
+CREATE TABLE IF NOT EXISTS work_materials (
+  id integer NOT NULL DEFAULT nextval('work_materials_id_seq'),
+  work_id integer NOT NULL,
+  material_id integer NOT NULL,
+  consumption numeric NOT NULL DEFAULT 1.0,
+  is_required boolean DEFAULT true,
+  notes text,
+  tenant_id uuid NOT NULL,
+  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  created_by uuid,
+  updated_by uuid
+);
+
+-- works
+CREATE TABLE IF NOT EXISTS works (
+  id integer NOT NULL DEFAULT nextval('works_id_seq'),
+  code VARCHAR(50) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  unit VARCHAR(50) NOT NULL,
+  base_price numeric NOT NULL DEFAULT 0.00,
+  tenant_id uuid,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  is_global boolean DEFAULT false,
+  phase VARCHAR(100),
+  section VARCHAR(100),
+  subsection VARCHAR(100),
+  category VARCHAR(100),
+  category_id uuid
+);
+
+-- =====================================
+-- PRIMARY KEYS & UNIQUE CONSTRAINTS
+-- =====================================
+
+ALTER TABLE categories ADD CONSTRAINT categories_parent_id_name_tenant_id_is_global_key UNIQUE (parent_id, name, tenant_id, is_global);
+ALTER TABLE categories ADD CONSTRAINT categories_pkey PRIMARY KEY (id);
+ALTER TABLE counterparties ADD CONSTRAINT counterparties_pkey PRIMARY KEY (id);
+ALTER TABLE estimate_items ADD CONSTRAINT estimate_items_pkey PRIMARY KEY (id);
+ALTER TABLE estimates ADD CONSTRAINT estimates_pkey PRIMARY KEY (id);
+ALTER TABLE materials ADD CONSTRAINT materials_pkey PRIMARY KEY (id);
+ALTER TABLE permissions ADD CONSTRAINT permissions_key_unique UNIQUE (key);
+ALTER TABLE permissions ADD CONSTRAINT permissions_pkey PRIMARY KEY (id);
+ALTER TABLE permissions ADD CONSTRAINT permissions_resource_action_unique UNIQUE (resource, action);
+ALTER TABLE projects ADD CONSTRAINT projects_pkey PRIMARY KEY (id);
+ALTER TABLE role_permissions ADD CONSTRAINT role_permissions_unique UNIQUE (role_id, permission_id);
+ALTER TABLE roles ADD CONSTRAINT roles_pkey PRIMARY KEY (id);
+ALTER TABLE schema_version ADD CONSTRAINT schema_version_pkey PRIMARY KEY (id);
+ALTER TABLE sessions ADD CONSTRAINT sessions_pkey PRIMARY KEY (id);
+ALTER TABLE tenants ADD CONSTRAINT tenants_pkey PRIMARY KEY (id);
+ALTER TABLE user_role_assignments ADD CONSTRAINT user_role_assignments_unique UNIQUE (tenant_id, user_id, role_id);
+ALTER TABLE user_tenants ADD CONSTRAINT user_tenants_unique UNIQUE (tenant_id, user_id);
+ALTER TABLE users ADD CONSTRAINT users_email_unique UNIQUE (email);
+ALTER TABLE users ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+ALTER TABLE vector_index_state ADD CONSTRAINT mixedbread_index_state_pkey PRIMARY KEY (document_id);
+ALTER TABLE work_hierarchy ADD CONSTRAINT work_hierarchy_pkey PRIMARY KEY (id);
+ALTER TABLE work_materials ADD CONSTRAINT work_materials_pkey PRIMARY KEY (id);
+ALTER TABLE works ADD CONSTRAINT works_code_scope_unique UNIQUE (code, is_global, tenant_id);
+ALTER TABLE works ADD CONSTRAINT works_pkey PRIMARY KEY (id);
+
+-- =====================================
+-- FOREIGN KEYS
+-- =====================================
+
+ALTER TABLE categories ADD CONSTRAINT categories_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+ALTER TABLE categories ADD CONSTRAINT categories_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE CASCADE;
+ALTER TABLE materials ADD CONSTRAINT materials_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+ALTER TABLE work_materials ADD CONSTRAINT work_materials_material_id_fkey FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE;
+ALTER TABLE work_materials ADD CONSTRAINT work_materials_work_id_fkey FOREIGN KEY (work_id) REFERENCES works(id) ON DELETE CASCADE;
+ALTER TABLE works ADD CONSTRAINT works_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+ALTER TABLE works ADD CONSTRAINT works_category_id_fkey FOREIGN KEY (category_id) REFERENCES categories(id);
+
+-- =====================================
+-- ИНДЕКСЫ
+-- =====================================
+
+CREATE INDEX IF NOT EXISTS idx_act_signatories_act_id ON public.act_signatories USING btree (act_id);
+CREATE INDEX IF NOT EXISTS idx_act_signatories_role ON public.act_signatories USING btree (role);
+CREATE INDEX IF NOT EXISTS idx_act_signatories_tenant_id ON public.act_signatories USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_categories_parent ON public.categories USING btree (parent_id);
+CREATE INDEX IF NOT EXISTS idx_categories_tenant ON public.categories USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_categories_type ON public.categories USING btree (type);
+CREATE INDEX IF NOT EXISTS idx_contracts_contract_date ON public.contracts USING btree (contract_date DESC);
+CREATE INDEX IF NOT EXISTS idx_contracts_contract_number ON public.contracts USING btree (contract_number);
+CREATE INDEX IF NOT EXISTS idx_contracts_contractor_id ON public.contracts USING btree (contractor_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_created_at ON public.contracts USING btree (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_contracts_customer_id ON public.contracts USING btree (customer_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_estimate_id ON public.contracts USING btree (estimate_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_estimate_status ON public.contracts USING btree (estimate_id, status);
+CREATE INDEX IF NOT EXISTS idx_contracts_project_id ON public.contracts USING btree (project_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_status ON public.contracts USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_contracts_template_data ON public.contracts USING gin (template_data);
+CREATE INDEX IF NOT EXISTS idx_contracts_tenant_id ON public.contracts USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_counterparties_company_name ON public.counterparties USING btree (company_name) WHERE ((entity_type)::text = 'legal'::text);
+CREATE INDEX IF NOT EXISTS idx_counterparties_email ON public.counterparties USING btree (email);
+CREATE INDEX IF NOT EXISTS idx_counterparties_entity_type ON public.counterparties USING btree (entity_type);
+CREATE INDEX IF NOT EXISTS idx_counterparties_full_name ON public.counterparties USING btree (full_name) WHERE ((entity_type)::text = 'individual'::text);
+CREATE INDEX IF NOT EXISTS idx_counterparties_inn ON public.counterparties USING btree (inn) WHERE ((entity_type)::text = 'legal'::text);
+CREATE INDEX IF NOT EXISTS idx_counterparties_phone ON public.counterparties USING btree (phone);
+CREATE INDEX IF NOT EXISTS idx_counterparties_tenant_id ON public.counterparties USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_expires_at ON public.email_verification_tokens USING btree (expires_at);
+CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_token ON public.email_verification_tokens USING btree (token);
+CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_user_id ON public.email_verification_tokens USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_email_verifications_email ON public.email_verifications USING btree (email);
+CREATE INDEX IF NOT EXISTS idx_email_verifications_expires_at ON public.email_verifications USING btree (expires_at);
+CREATE INDEX IF NOT EXISTS idx_email_verifications_token ON public.email_verifications USING btree (token);
+CREATE INDEX IF NOT EXISTS idx_email_verifications_user_id ON public.email_verifications USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_estimate_item_materials_item_id ON public.estimate_item_materials USING btree (estimate_item_id);
+CREATE INDEX IF NOT EXISTS idx_estimate_item_materials_material_id ON public.estimate_item_materials USING btree (material_id);
+CREATE UNIQUE INDEX idx_estimate_item_materials_unique ON public.estimate_item_materials USING btree (estimate_item_id, material_id);
+CREATE INDEX IF NOT EXISTS idx_estimate_item_materials_weight ON public.estimate_item_materials USING btree (weight) WHERE (weight > (0)::numeric);
+CREATE INDEX IF NOT EXISTS idx_estimate_items_estimate_id ON public.estimate_items USING btree (estimate_id);
+CREATE INDEX IF NOT EXISTS idx_estimate_items_item_type ON public.estimate_items USING btree (item_type);
+CREATE INDEX IF NOT EXISTS idx_estimate_items_position ON public.estimate_items USING btree (estimate_id, position_number);
+CREATE INDEX IF NOT EXISTS idx_estimate_template_materials_material_id ON public.estimate_template_materials USING btree (material_id);
+CREATE INDEX IF NOT EXISTS idx_estimate_template_materials_sort_order ON public.estimate_template_materials USING btree (template_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_estimate_template_materials_template_id ON public.estimate_template_materials USING btree (template_id);
+CREATE INDEX IF NOT EXISTS idx_estimate_template_works_sort_order ON public.estimate_template_works USING btree (template_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_estimate_template_works_template_id ON public.estimate_template_works USING btree (template_id);
+CREATE INDEX IF NOT EXISTS idx_estimate_template_works_work_id ON public.estimate_template_works USING btree (work_id);
+CREATE INDEX IF NOT EXISTS idx_estimate_templates_category ON public.estimate_templates USING btree (category);
+CREATE INDEX IF NOT EXISTS idx_estimate_templates_created_by ON public.estimate_templates USING btree (created_by);
+CREATE INDEX IF NOT EXISTS idx_estimate_templates_tenant_id ON public.estimate_templates USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_estimates_created_at ON public.estimates USING btree (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_estimates_created_by ON public.estimates USING btree (created_by);
+CREATE INDEX IF NOT EXISTS idx_estimates_estimate_date ON public.estimates USING btree (estimate_date DESC);
+CREATE INDEX IF NOT EXISTS idx_estimates_name_gin ON public.estimates USING gin (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_estimates_project_id ON public.estimates USING btree (project_id);
+CREATE INDEX IF NOT EXISTS idx_estimates_project_status ON public.estimates USING btree (project_id, status);
+CREATE INDEX IF NOT EXISTS idx_estimates_status ON public.estimates USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_estimates_tenant_id ON public.estimates USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_estimates_tenant_project ON public.estimates USING btree (tenant_id, project_id);
+CREATE INDEX IF NOT EXISTS idx_estimates_tenant_status ON public.estimates USING btree (tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_global_purchases_date ON public.global_purchases USING btree (purchase_date DESC);
+CREATE INDEX IF NOT EXISTS idx_global_purchases_estimate ON public.global_purchases USING btree (estimate_id);
+CREATE INDEX IF NOT EXISTS idx_global_purchases_material ON public.global_purchases USING btree (material_id);
+CREATE INDEX IF NOT EXISTS idx_global_purchases_project ON public.global_purchases USING btree (project_id);
+CREATE INDEX IF NOT EXISTS idx_global_purchases_tenant ON public.global_purchases USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_global_purchases_tenant_date ON public.global_purchases USING btree (tenant_id, purchase_date DESC);
+CREATE INDEX IF NOT EXISTS idx_materials_category ON public.materials USING btree (category);
+CREATE INDEX IF NOT EXISTS idx_materials_category_gin ON public.materials USING gin (category gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_materials_category_global ON public.materials USING btree (category, is_global, sku_number);
+CREATE INDEX IF NOT EXISTS idx_materials_global_only ON public.materials USING btree (sku_number) WHERE (is_global = true);
+CREATE INDEX IF NOT EXISTS idx_materials_is_global ON public.materials USING btree (is_global);
+CREATE INDEX IF NOT EXISTS idx_materials_is_global_category ON public.materials USING btree (is_global, category);
+CREATE INDEX IF NOT EXISTS idx_materials_is_global_sku ON public.materials USING btree (is_global DESC, sku);
+CREATE INDEX IF NOT EXISTS idx_materials_name_trgm ON public.materials USING gin (lower((name)::text) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_materials_sku ON public.materials USING btree (sku);
+CREATE INDEX IF NOT EXISTS idx_materials_sku_trgm ON public.materials USING gin (lower((sku)::text) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_materials_supplier_trgm ON public.materials USING gin (lower((supplier)::text) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_materials_tenant_id ON public.materials USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_materials_tenant_only ON public.materials USING btree (tenant_id, sku_number) WHERE (is_global = false);
+CREATE INDEX IF NOT EXISTS idx_object_openings_tenant_parameter ON public.object_openings USING btree (tenant_id, parameter_id);
+CREATE INDEX IF NOT EXISTS idx_object_parameters_tenant_estimate ON public.object_parameters USING btree (tenant_id, estimate_id);
+CREATE INDEX IF NOT EXISTS idx_password_resets_email ON public.password_resets USING btree (email);
+CREATE INDEX IF NOT EXISTS idx_password_resets_expires_at ON public.password_resets USING btree (expires_at);
+CREATE INDEX IF NOT EXISTS idx_password_resets_token ON public.password_resets USING btree (token);
+CREATE INDEX IF NOT EXISTS idx_password_resets_user_id ON public.password_resets USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_permissions_is_hidden ON public.permissions USING btree (is_hidden);
+CREATE INDEX IF NOT EXISTS idx_team_active ON public.project_team_members USING btree (project_id) WHERE (left_at IS NULL);
+CREATE INDEX IF NOT EXISTS idx_team_project_id ON public.project_team_members USING btree (project_id);
+CREATE INDEX IF NOT EXISTS idx_team_project_user ON public.project_team_members USING btree (project_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_team_role ON public.project_team_members USING btree (role);
+CREATE INDEX IF NOT EXISTS idx_team_tenant_id ON public.project_team_members USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_team_tenant_project ON public.project_team_members USING btree (tenant_id, project_id);
+CREATE INDEX IF NOT EXISTS idx_team_user_id ON public.project_team_members USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_projects_client_gin ON public.projects USING gin (client gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_projects_contract_number ON public.projects USING btree (contract_number) WHERE (contract_number IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_projects_contractor_gin ON public.projects USING gin (contractor gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_projects_created_at ON public.projects USING btree (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_projects_created_by ON public.projects USING btree (created_by);
+CREATE INDEX IF NOT EXISTS idx_projects_end_date ON public.projects USING btree (end_date);
+CREATE INDEX IF NOT EXISTS idx_projects_manager_id ON public.projects USING btree (manager_id);
+CREATE INDEX IF NOT EXISTS idx_projects_name_gin ON public.projects USING gin (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_projects_object_name_gin ON public.projects USING gin (object_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_projects_start_date ON public.projects USING btree (start_date);
+CREATE INDEX IF NOT EXISTS idx_projects_status ON public.projects USING btree (status);
+CREATE UNIQUE INDEX idx_projects_tenant_contract_number ON public.projects USING btree (tenant_id, contract_number) WHERE (contract_number IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_projects_tenant_created_at ON public.projects USING btree (tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_projects_tenant_id ON public.projects USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_projects_tenant_status ON public.projects USING btree (tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_purchases_with_remainder ON public.purchases USING btree (estimate_id) WHERE ((quantity - purchased_quantity) > (0)::numeric);
+CREATE INDEX IF NOT EXISTS idx_role_permissions_is_hidden ON public.role_permissions USING btree (role_id, is_hidden);
+CREATE INDEX IF NOT EXISTS idx_role_permissions_permission_id ON public.role_permissions USING btree (permission_id);
+CREATE INDEX IF NOT EXISTS idx_role_permissions_role_id ON public.role_permissions USING btree (role_id);
+CREATE UNIQUE INDEX idx_roles_key_global ON public.roles USING btree (key) WHERE (tenant_id IS NULL);
+CREATE UNIQUE INDEX idx_roles_key_tenant ON public.roles USING btree (key, tenant_id) WHERE (tenant_id IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_schedules_created_at ON public.schedules USING btree (created_at);
+CREATE INDEX IF NOT EXISTS idx_schedules_estimate_id ON public.schedules USING btree (estimate_id);
+CREATE INDEX IF NOT EXISTS idx_schedules_estimate_phase_position ON public.schedules USING btree (estimate_id, phase, position_number);
+CREATE INDEX IF NOT EXISTS idx_schedules_phase ON public.schedules USING btree (phase);
+CREATE INDEX IF NOT EXISTS idx_schedules_position ON public.schedules USING btree (position_number);
+CREATE INDEX IF NOT EXISTS idx_schedules_project_id ON public.schedules USING btree (project_id);
+CREATE INDEX IF NOT EXISTS idx_schedules_tenant_id ON public.schedules USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON public.sessions USING btree (expires_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_refresh_token ON public.sessions USING btree (refresh_token);
+CREATE INDEX IF NOT EXISTS idx_sessions_tenant_id ON public.sessions USING btree (tenant_id) WHERE (tenant_id IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON public.sessions USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_tenants_inn ON public.tenants USING btree (inn) WHERE (inn IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_tenants_ogrn ON public.tenants USING btree (ogrn) WHERE (ogrn IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_user_role_assignments_role_id ON public.user_role_assignments USING btree (role_id);
+CREATE INDEX IF NOT EXISTS idx_user_role_assignments_tenant_user ON public.user_role_assignments USING btree (tenant_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_user_role_assignments_user_id ON public.user_role_assignments USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_user_tenants_default ON public.user_tenants USING btree (user_id, is_default) WHERE (is_default = true);
+CREATE INDEX IF NOT EXISTS idx_user_tenants_tenant_id ON public.user_tenants USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_user_tenants_user_id ON public.user_tenants USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_users_created_at ON public.users USING btree (created_at);
+CREATE INDEX IF NOT EXISTS idx_users_email ON public.users USING btree (email);
+CREATE INDEX IF NOT EXISTS idx_users_phone ON public.users USING btree (phone) WHERE (phone IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_users_status ON public.users USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_mixedbread_state_entity_type ON public.vector_index_state USING btree (entity_type, scope);
+CREATE INDEX IF NOT EXISTS idx_mixedbread_state_scope_tenant ON public.vector_index_state USING btree (scope, tenant_id, last_seen_at);
+CREATE INDEX IF NOT EXISTS idx_mixedbread_state_tenant_id ON public.vector_index_state USING btree (tenant_id) WHERE (tenant_id IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_vector_index_state_entity ON public.vector_index_state USING btree (entity_type, db_id);
+CREATE INDEX IF NOT EXISTS idx_vector_index_state_last_seen ON public.vector_index_state USING btree (last_seen_at);
+CREATE INDEX IF NOT EXISTS idx_vector_index_state_scope ON public.vector_index_state USING btree (scope);
+CREATE INDEX IF NOT EXISTS idx_vector_index_state_tenant ON public.vector_index_state USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_act_items_act_id ON public.work_completion_act_items USING btree (act_id);
+CREATE INDEX IF NOT EXISTS idx_act_items_estimate_item_id ON public.work_completion_act_items USING btree (estimate_item_id);
+CREATE INDEX IF NOT EXISTS idx_act_items_section ON public.work_completion_act_items USING btree (section);
+CREATE INDEX IF NOT EXISTS idx_act_items_tenant_id ON public.work_completion_act_items USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_acts_contract_number ON public.work_completion_acts USING btree (contract_number);
+CREATE INDEX IF NOT EXISTS idx_acts_contractor_id ON public.work_completion_acts USING btree (contractor_id);
+CREATE INDEX IF NOT EXISTS idx_acts_customer_id ON public.work_completion_acts USING btree (customer_id);
+CREATE INDEX IF NOT EXISTS idx_acts_date ON public.work_completion_acts USING btree (act_date);
+CREATE INDEX IF NOT EXISTS idx_acts_estimate_id ON public.work_completion_acts USING btree (estimate_id);
+CREATE INDEX IF NOT EXISTS idx_acts_form_type ON public.work_completion_acts USING btree (form_type);
+CREATE INDEX IF NOT EXISTS idx_acts_project_id ON public.work_completion_acts USING btree (project_id);
+CREATE INDEX IF NOT EXISTS idx_acts_status ON public.work_completion_acts USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_acts_tenant_id ON public.work_completion_acts USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_acts_type ON public.work_completion_acts USING btree (act_type);
+CREATE INDEX IF NOT EXISTS idx_work_completions_completed ON public.work_completions USING btree (completed);
+CREATE INDEX IF NOT EXISTS idx_work_completions_estimate_id ON public.work_completions USING btree (estimate_id);
+CREATE INDEX IF NOT EXISTS idx_work_completions_tenant_id ON public.work_completions USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_work_materials_composite ON public.work_materials USING btree (work_id, tenant_id);
+CREATE INDEX IF NOT EXISTS idx_work_materials_material_id ON public.work_materials USING btree (material_id);
+CREATE INDEX IF NOT EXISTS idx_work_materials_tenant_id ON public.work_materials USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_work_materials_work_id ON public.work_materials USING btree (work_id);
+CREATE INDEX IF NOT EXISTS idx_works_category ON public.works USING btree (category);
+CREATE INDEX IF NOT EXISTS idx_works_category_gin ON public.works USING gin (category gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_works_code ON public.works USING btree (code);
+CREATE INDEX IF NOT EXISTS idx_works_code_gin ON public.works USING gin (code gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_works_global_code ON public.works USING btree (code) WHERE (is_global = true);
+CREATE INDEX IF NOT EXISTS idx_works_hierarchy ON public.works USING btree (phase, section, subsection) WHERE (phase IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_works_is_global ON public.works USING btree (is_global);
+CREATE INDEX IF NOT EXISTS idx_works_is_global_category ON public.works USING btree (is_global, category);
+CREATE INDEX IF NOT EXISTS idx_works_is_global_code ON public.works USING btree (is_global DESC, code);
+CREATE INDEX IF NOT EXISTS idx_works_name_gin ON public.works USING gin (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_works_phase ON public.works USING btree (phase) WHERE (phase IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_works_section ON public.works USING btree (section) WHERE (section IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_works_subsection ON public.works USING btree (subsection) WHERE (subsection IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_works_tenant_code ON public.works USING btree (tenant_id, code) WHERE (is_global = false);
 
 -- =====================================
 -- ROW LEVEL SECURITY

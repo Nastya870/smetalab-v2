@@ -46,6 +46,40 @@ async function generateBaseline() {
     schema += '\n';
   }
 
+  // 1.5. Последовательности (Sequences)
+  console.log('📦 Получаем последовательности...');
+  const sequences = await client.query(`
+    SELECT sequence_name 
+    FROM information_schema.sequences 
+    WHERE sequence_schema = 'public'
+  `);
+
+  if (sequences.rows.length > 0) {
+    schema += `-- =====================================\n-- ПОСЛЕДОВАТЕЛЬНОСТИ\n-- =====================================\n\n`;
+    for (const seq of sequences.rows) {
+      schema += `CREATE SEQUENCE IF NOT EXISTS "${seq.sequence_name}";\n`;
+    }
+    schema += '\n';
+  }
+
+  // 1.7. Функции (необходимы для RLS и дефолтов)
+  console.log('📦 Получаем функции...');
+  const functions = await client.query(`
+    SELECT pg_get_functiondef(p.oid) as def
+    FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = 'public'
+      AND p.prokind != 'a'
+    ORDER BY p.proname
+  `);
+
+  if (functions.rows.length > 0) {
+    schema += `-- =====================================\n-- ФУНКЦИИ\n-- =====================================\n\n`;
+    for (const fn of functions.rows) {
+      schema += fn.def.replace('CREATE FUNCTION', 'CREATE OR REPLACE FUNCTION') + ';\n\n';
+    }
+  }
+
   // 2. Типы (ENUM и др.)
   console.log('📦 Получаем типы...');
   const types = await client.query(`
@@ -217,23 +251,7 @@ async function generateBaseline() {
     schema += '\n';
   }
 
-  // 7. Функции (только обычные, не aggregate)
-  console.log('📦 Получаем функции...');
-  const functions = await client.query(`
-    SELECT pg_get_functiondef(p.oid) as def
-    FROM pg_proc p
-    JOIN pg_namespace n ON p.pronamespace = n.oid
-    WHERE n.nspname = 'public'
-      AND p.prokind = 'f'
-    ORDER BY p.proname
-  `);
 
-  if (functions.rows.length > 0) {
-    schema += `-- =====================================\n-- ФУНКЦИИ\n-- =====================================\n\n`;
-    for (const fn of functions.rows) {
-      schema += fn.def.replace('CREATE FUNCTION', 'CREATE OR REPLACE FUNCTION') + ';\n\n';
-    }
-  }
 
   // 8. RLS
   console.log('📦 Получаем RLS политики...');
